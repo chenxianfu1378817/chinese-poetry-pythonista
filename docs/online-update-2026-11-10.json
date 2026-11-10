@@ -1,0 +1,21 @@
+{
+  "result": "PASS",
+  "from_version": "1.0.0",
+  "to_version": "1.0.3",
+  "manifest_url": "https://raw.githubusercontent.com/chenxianfu1378817/chinese-poetry-pythonista/updates/update_channel/manifest.json",
+  "update_url": "https://raw.githubusercontent.com/chenxianfu1378817/chinese-poetry-pythonista/updates/update_channel/poetry-1.0.3.zip",
+  "sha256": "782e540c1afbe56cda61498859b625b10cb844956c67a0b5144c2cb6c552192d",
+  "checks": [
+    "public HTTPS manifest download",
+    "public HTTPS ZIP download",
+    "original 1.0.0 updater install",
+    "SHA256 and package paths",
+    "profile bytes unchanged",
+    "original launcher loads new version",
+    "favorites/notes/theme preserved",
+    "latest version check returns no update"
+  ],
+  "limitations": [
+    "Desktop with fake ui module; not an iPhone device test"
+  ]
+}

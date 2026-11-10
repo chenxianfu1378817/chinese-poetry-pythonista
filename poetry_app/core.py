@@ -1,5 +1,5 @@
 import json, os, hashlib, random, datetime, tempfile
-VERSION = '1.0.1'
+VERSION = '1.0.2'
 DEFAULT_UPDATE_URL = 'https://github.com/chenxianfu1378817/chinese-poetry-pythonista/releases/latest/download/manifest.json'
 
 def atomic_json(path, value):

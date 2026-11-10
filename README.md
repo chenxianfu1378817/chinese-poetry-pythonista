@@ -26,7 +26,7 @@ https://github.com/chenxianfu1378817/chinese-poetry-pythonista/releases/latest/d
 
 修改源码、增加 `poetry_app/core.py` 的 VERSION，更新 CHANGELOG.md 和 RELEASE_NOTES.md，提交并推送 `v版本号` 标签。GitHub Actions 通过测试后自动生成并发布完整安装 ZIP、增量更新 ZIP、SHA256SUMS 和 manifest.json。应用更新包仅包含 `poetry_app` 模块；`main.py` 启动器或离线数据的变更需重新导入完整安装包，并保留用户数据。
 
-本地验证：`python3 -m unittest -v`。本地打包：`python3 make_release.py --tag v1.0.1 --base-url https://github.com/chenxianfu1378817/chinese-poetry-pythonista/releases/download/v1.0.1`。打包工具不会自行上传。
+本地验证：`python3 -m unittest -v`。本地打包：`python3 make_release.py --tag v1.0.2 --base-url https://github.com/chenxianfu1378817/chinese-poetry-pythonista/releases/download/v1.0.2`。打包工具不会自行上传。
 
 ## 数据与验证范围
 

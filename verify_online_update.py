@@ -25,20 +25,16 @@ def verify():
             before=(root/'user_data/profile.json').read_bytes()
             updater.install(str(root),manifest)
             assert (root/'user_data/profile.json').read_bytes()==before
-            loaded=[]
-            class Web:
-                def __init__(self,**kwargs): pass
-                def load_html(self,html):
-                    payload=json.loads(re.search(r'window.BOOT=(.*?);\nconst themes=',html,re.S).group(1))
-                    assert payload['version']==version
-                    assert ident in payload['user']['favorites']
-                    assert payload['user']['notes'][ident]=='线上更新验证手记'
-                    assert payload['user']['theme']=='竹叶青'
-                    loaded.append(payload['version'])
-                def present(self,style): assert style=='fullscreen'
-            sys.modules['ui']=types.SimpleNamespace(WebView=Web,delay=lambda fn,t:fn())
+            from test_support import fake_ui, Web
+            sys.modules['ui']=fake_ui()
+            before_load=len(Web.loaded)
             runpy.run_path(str(root/'main.py'),run_name='__main__')
-            assert loaded==[version]
+            assert len(Web.loaded)==before_load+1
+            payload=json.loads(re.search(r'window.BOOT=(.*?);\nconst themes=',Web.loaded[-1].html,re.S).group(1))
+            assert payload['version']==version
+            assert ident in payload['user']['favorites']
+            assert payload['user']['notes'][ident]=='线上更新验证手记'
+            assert payload['user']['theme']=='竹叶青'
             from poetry_app import updater as latest
             assert latest.check(DEFAULT_UPDATE_URL) is None
             with zipfile.ZipFile(io.BytesIO(full)) as z:

@@ -1,5 +1,7 @@
-import json, os, hashlib, random, datetime, tempfile
-VERSION = '1.0.3'
+import json, os, random, datetime, tempfile
+from .featured import EXTRA_POEMS, READINGS
+from .learning import review_record
+VERSION = '1.1.0'
 DEFAULT_UPDATE_URL = 'https://raw.githubusercontent.com/chenxianfu1378817/chinese-poetry-pythonista/updates/update_channel/manifest.json'
 
 def atomic_json(path, value):
@@ -12,28 +14,54 @@ def atomic_json(path, value):
     finally:
         if os.path.exists(tmp): os.unlink(tmp)
 
+def font_size(value):
+    try: return max(16,min(40,int(value)))
+    except (TypeError, ValueError): return 23
+
 class Library:
     def __init__(self, root):
-        self.root = root
-        self.path = os.path.join(root, 'user_data', 'profile.json')
-        self.user = {'favorites': [], 'notes': {}, 'theme': '活力橙', 'mode': 'system', 'update_url': DEFAULT_UPDATE_URL}
+        self.root=root
+        self.path=os.path.join(root,'user_data','profile.json')
+        self.user={'favorites':[],'notes':{},'theme':'活力橙','mode':'system','update_url':DEFAULT_UPDATE_URL,
+                   'font_size':23,'learning':{},'ai_cache':{},'ai_endpoint':'','ai_model':''}
         if os.path.exists(self.path):
-            with open(self.path, encoding='utf-8') as f: self.user.update(json.load(f))
-        if not self.user.get('update_url') or self.user.get('update_url') == 'https://github.com/chenxianfu1378817/chinese-poetry-pythonista/releases/latest/download/manifest.json':
-            self.user['update_url'] = DEFAULT_UPDATE_URL
-        with open(os.path.join(root, 'data', 'poems.json'), encoding='utf-8') as f: self.poems = json.load(f)
-    def save(self): atomic_json(self.path, self.user)
-    def search(self, query='', category='', favorites=False):
-        q = query.casefold().strip()
-        return [p for p in self.poems if (not category or p['category'] == category) and
+            with open(self.path,encoding='utf-8') as f:self.user.update(json.load(f))
+        if not self.user.get('update_url') or self.user.get('update_url')=='https://github.com/chenxianfu1378817/chinese-poetry-pythonista/releases/latest/download/manifest.json':
+            self.user['update_url']=DEFAULT_UPDATE_URL
+        self.user['font_size']=font_size(self.user.get('font_size'))
+        with open(os.path.join(root,'data','poems.json'),encoding='utf-8') as f:self.poems=json.load(f)
+        ids={p['id'] for p in self.poems}
+        self.poems.extend(p for p in EXTRA_POEMS if p['id'] not in ids)
+        self.by_id={p['id']:p for p in self.poems}
+    def save(self): atomic_json(self.path,self.user)
+    def poem(self,ident):
+        if ident not in self.by_id:raise ValueError('未找到诗词')
+        return self.by_id[ident]
+    def search(self,query='',category='',favorites=False):
+        q=query.casefold().strip()
+        return [p for p in self.poems if (not category or p['category']==category) and
                 (not favorites or p['id'] in self.user['favorites']) and
-                (not q or q in (p['title'] + p['author'] + ''.join(p['paragraphs'])).casefold())]
-    def today(self):
-        seed = datetime.date.today().isoformat()
-        return random.Random(seed).choice(self.poems)
-    def favorite(self, ident):
-        if ident not in {p['id'] for p in self.poems}: raise ValueError('未知诗词')
-        f = self.user['favorites']
-        if ident in f: f.remove(ident)
-        else: f.append(ident)
+                (not q or q in (p['title']+p['author']+''.join(p['paragraphs'])).casefold())]
+    def today(self):return random.Random(datetime.date.today().isoformat()).choice(EXTRA_POEMS)
+    def favorite(self,ident):
+        self.poem(ident);f=self.user['favorites']
+        if ident in f:f.remove(ident)
+        else:f.append(ident)
         self.save()
+    def settings(self,data):
+        for k in ('theme','mode','update_url','ai_endpoint','ai_model'):
+            if k in data:self.user[k]=str(data[k])
+        if 'font_size' in data:self.user['font_size']=font_size(data['font_size'])
+        if 'note' in data:
+            self.poem(data['id']);self.user['notes'][data['id']]=str(data['note'])
+        self.save()
+    def practice(self,ident,mastered=False,score=None):
+        self.poem(ident)
+        self.user['learning'][ident]=review_record(self.user['learning'].get(ident),mastered,score)
+        self.save()
+    def reading(self,ident):
+        p=self.poem(ident)
+        return READINGS.get(ident) or {'analysis':'本首暂未收录逐篇离线赏析。先把每句景物、动作与情绪分别圈出，再思考它们怎样连成一幅画面。',
+            'imagery':'从原文中选择一到两个反复出现或最有感触的词，比较它们在不同句子中的作用。',
+            'question':'诗的开头和结尾，视角或情感有什么变化？请从原文找出依据。',
+            'credit':'通用研读提示，并非本诗的白话翻译或逐句注释。'}

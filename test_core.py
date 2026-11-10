@@ -19,8 +19,8 @@ class Tests(unittest.TestCase):
             if extra:z.writestr(extra,'bad')
         raw=b.getvalue();return raw,{'version':NEXT_VERSION,'sha256':hashlib.sha256(raw).hexdigest(),'url':'https://example.com/release.zip'}
     def test_data(self):
-        self.assertEqual(len(self.lib.poems),2305)
-        self.assertEqual(len({p['id'] for p in self.lib.poems}),2305)
+        self.assertEqual(len(self.lib.poems),2315)
+        self.assertEqual(len({p['id'] for p in self.lib.poems}),2315)
         self.assertEqual({p['category'] for p in self.lib.poems},{'唐诗','宋词','诗经'})
     def test_search(self):
         p=self.lib.poems[0]
@@ -35,7 +35,25 @@ class Tests(unittest.TestCase):
         reloaded=Library(str(self.root));self.assertEqual(reloaded.user,self.lib.user)
         self.assertEqual(len(reloaded.search(favorites=True)),1)
         reloaded.favorite(ident);self.assertEqual(reloaded.search(favorites=True),[])
-    def test_today(self):self.assertEqual(self.lib.today(),self.lib.today())
+    def test_today(self):
+        self.assertEqual(self.lib.today(),self.lib.today())
+        self.assertTrue(self.lib.today()['featured'])
+    def test_font_and_learning_persist(self):
+        ident=self.lib.poems[-1]['id']
+        self.lib.settings({'font_size':32})
+        self.lib.practice(ident,True,100)
+        reloaded=Library(str(self.root))
+        self.assertEqual(reloaded.user['font_size'],32)
+        self.assertEqual(reloaded.user['learning'][ident]['status'],'mastered')
+        self.assertEqual(reloaded.user['learning'][ident]['last_score'],100)
+        reloaded.settings({'font_size':100})
+        self.assertEqual(reloaded.user['font_size'],40)
+        reloaded.settings({'font_size':-1})
+        self.assertEqual(reloaded.user['font_size'],16)
+    def test_offline_reading(self):
+        self.assertIn('translation',self.lib.reading(self.lib.poems[-1]['id']))
+        self.assertIn('通用',self.lib.reading(self.lib.poems[0]['id'])['credit'])
+
     def test_update_preserves_user(self):
         self.lib.favorite(self.lib.poems[0]['id']);before=(self.root/'user_data/profile.json').read_bytes()
         raw,m=self.package();updater.install(str(self.root),m,raw)

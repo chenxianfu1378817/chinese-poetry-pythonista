@@ -11,6 +11,36 @@ from test_support import fake_ui
 
 ROOT=Path(__file__).resolve().parent
 
+def check_theme_switching(page):
+    nav=page.locator('#nav')
+    nav.get_by_role('button',name='设置',exact=True).click()
+    for mode,label in [('dark','深色'),('light','浅色')]:
+        page.get_by_role('button',name=label,exact=True).click()
+        backgrounds=set();accents=set()
+        for theme in page.evaluate('Object.keys(themes)'):
+            page.get_by_role('button',name=theme,exact=True).click()
+            page.wait_for_function('bridgeQueue.length===0')
+            colors=page.evaluate('''()=>{let s=getComputedStyle(document.documentElement);return {theme:user.theme,scheme:s.colorScheme,bg:s.getPropertyValue('--bg'),accent:s.getPropertyValue('--accent')}}''')
+            assert colors['theme']==theme and colors['scheme']==mode
+            assert page.locator('.themes .active').inner_text()==theme
+            backgrounds.add(colors['bg']);accents.add(colors['accent'])
+        assert len(backgrounds)==8 and len(accents)==8
+    page.get_by_role('button',name='跟随系统',exact=True).click()
+    page.emulate_media(color_scheme='dark')
+    page.wait_for_function("document.documentElement.style.colorScheme==='dark'")
+    page.emulate_media(color_scheme='light')
+    page.wait_for_function("document.documentElement.style.colorScheme==='light'")
+    page.get_by_role('button',name='深色',exact=True).click()
+    page.wait_for_function('bridgeQueue.length===0');page.reload()
+    page.wait_for_function("user.theme==='赤陶棕' && user.mode==='dark'")
+    assert page.evaluate('document.documentElement.style.colorScheme')=='dark'
+    nav.get_by_role('button',name='设置',exact=True).click()
+    assert page.locator('.themes .active').inner_text()=='赤陶棕'
+    page.get_by_role('button',name='活力橙',exact=True).click()
+    page.get_by_role('button',name='跟随系统',exact=True).click()
+    page.wait_for_function('bridgeQueue.length===0')
+    nav.get_by_role('button',name='今日',exact=True).click()
+
 def check():
     with tempfile.TemporaryDirectory() as tmp:
         shutil.copytree(ROOT/'data',Path(tmp)/'data')
@@ -31,6 +61,7 @@ def check():
                 window.SpeechSynthesisUtterance=class{constructor(t){this.text=t}};''')
                 page.goto(reader.base)
                 page.wait_for_function('boot.stats.total===25324 && poems.length<100')
+                check_theme_switching(page)
                 assert '赏析' not in page.locator('body').inner_text()
                 nav=page.locator('#nav')
                 nav.get_by_role('button',name='诗库',exact=True).click()
@@ -120,6 +151,6 @@ def check():
                 assert not errors,errors
                 browser.close()
         finally:reader.close();ui.shutdown()
-    print('PASS: 25,324-record local catalog; author filter; pagination; cross-script search; saved legacy IDs; notes, favorites, learning and font persistence; local voice selection; four layouts; exit. No real iPhone or paid AI test.')
+    print('PASS: eight distinct light/dark themes, system appearance and persistence; 25,324-record local catalog; author filter; pagination; cross-script search; saved legacy IDs; notes, favorites, learning and font persistence; local voice selection; four layouts; exit. No real iPhone or paid AI test.')
 
 if __name__=='__main__':check()

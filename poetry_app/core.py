@@ -3,7 +3,7 @@ from .featured import EXTRA_POEMS
 from .learning import review_record
 from .corpus import load,MAJOR_AUTHORS,CHAR_MAP
 import collections
-VERSION = '1.5.0'
+VERSION = '1.5.1'
 DEFAULT_UPDATE_URL = 'https://raw.githubusercontent.com/chenxianfu1378817/chinese-poetry-pythonista/updates/update_channel/manifest.json'
 
 def atomic_json(path, value):

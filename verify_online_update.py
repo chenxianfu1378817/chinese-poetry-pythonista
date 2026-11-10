@@ -41,25 +41,7 @@ def verify():
                 assert z.testzip() is None
                 assert 'ChinesePoetry/main.py' in z.namelist()
                 assert not any('/user_data/' in n or '/.git/' in n for n in z.namelist())
-        # The separate recovery entry point must work even when the app cannot open.
-        recovery=updater.fetch(base+'/repair_start.py')
-        assert hashlib.sha256(recovery).hexdigest()+'  repair_start.py' in sums
-        with tempfile.TemporaryDirectory() as temp:
-            recovery_root=Path(temp)
-            shutil.copytree(ROOT/'data',recovery_root/'data')
-            (recovery_root/'main.py').write_text('OLD_LAUNCHER = True\n',encoding='utf-8')
-            user=recovery_root/'user_data';user.mkdir()
-            original=b'{"favorites":["keep"],"notes":{"keep":"unchanged"}}'
-            (user/'profile.json').write_bytes(original)
-            (user/'active.json').write_text('{"version":"1.1.0"}',encoding='utf-8')
-            script=recovery_root/'repair_start.py';script.write_bytes(recovery)
-            recovery_module=runpy.run_path(str(script),run_name='recovery_verification')
-            payload_zip=updater.fetch(manifest['url'])
-            assert recovery_module['repair'](str(recovery_root),manifest,payload_zip)==version
-            assert (user/'profile.json').read_bytes()==original
-            assert list(user.glob('startup_backup_*/main.py'))
-            assert 'def main()' in (recovery_root/'main.py').read_text(encoding='utf-8')
-        return {'result':'PASS','version':version,'manifest_url':DEFAULT_UPDATE_URL,'sha256':manifest['sha256'],'checks':['public anonymous HTTPS manifest','public HTTPS full ZIP and SHA256SUMS','public HTTPS app update ZIP','isolated install and atomic activation','profile bytes preserved','launcher loads downloaded code','favorites, notes and theme preserved','latest version reports no update','published standalone recovery script SHA256','recovery installs without opening UI','old launcher backed up and replaced','recovery preserves profile bytes'],'scope':'Desktop smoke test with simulated older version number and ui module; not an iPhone device test'}
+        return {'result':'PASS','version':version,'manifest_url':DEFAULT_UPDATE_URL,'sha256':manifest['sha256'],'checks':['public anonymous HTTPS manifest','public HTTPS full ZIP and SHA256SUMS','public HTTPS app update ZIP','isolated install and atomic activation','profile bytes preserved','launcher loads downloaded code','favorites, notes and theme preserved','latest version reports no update'],'scope':'Desktop smoke test with simulated older version number and ui module; not an iPhone device test'}
     finally: updater.VERSION=saved_version
 
 if __name__=='__main__':

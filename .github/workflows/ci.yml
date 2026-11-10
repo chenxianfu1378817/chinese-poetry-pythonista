@@ -17,4 +17,5 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
       - run: python -m unittest -v
+      - run: python check_frontend.py
       - run: python -m compileall -q main.py poetry_app make_release.py

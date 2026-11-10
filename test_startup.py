@@ -1,9 +1,8 @@
 import ast,hashlib,importlib.util,io,json,shutil,tempfile,unittest,zipfile
 from pathlib import Path
 from unittest.mock import patch
-import repair_start
 ROOT=Path(__file__).resolve().parent
-class RecoveryTests(unittest.TestCase):
+class StartupTests(unittest.TestCase):
     def setUp(self):
         self.temp=tempfile.TemporaryDirectory();self.root=Path(self.temp.name)
         shutil.copytree(ROOT/'data',self.root/'data')
@@ -12,39 +11,11 @@ class RecoveryTests(unittest.TestCase):
         self.profile=b'{"favorites":["kept"],"notes":{"kept":"untouched"}}'
         (user/'profile.json').write_bytes(self.profile)
     def tearDown(self):self.temp.cleanup()
-    def package(self):
-        b=io.BytesIO()
-        with zipfile.ZipFile(b,'w') as z:
-            for path in (ROOT/'poetry_app').iterdir():
-                if path.suffix in ('.py','.html'):z.writestr('poetry_app/'+path.name,path.read_bytes())
-        raw=b.getvalue()
-        return raw,{'version':'1.1.1','sha256':hashlib.sha256(raw).hexdigest(),'url':'https://example.com/update.zip'}
     def launcher(self):
         spec=importlib.util.spec_from_file_location('launcher_test',ROOT/'main.py')
         module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
         module.ROOT=str(self.root);module.USER=str(self.root/'user_data')
         return module
-    def test_repair_replaces_launcher_and_program_without_profile_changes(self):
-        raw,m=self.package();(self.root/'user_data/active.json').write_text('{"version":"1.1.0"}')
-        self.assertEqual(repair_start.repair(str(self.root),m,raw),'1.1.1')
-        self.assertEqual((self.root/'user_data/profile.json').read_bytes(),self.profile)
-        self.assertEqual((self.root/'main.py').read_text(),repair_start.LAUNCHER)
-        self.assertTrue((self.root/'releases/1.1.1/poetry_app/startup.py').is_file())
-        self.assertTrue(list((self.root/'user_data').glob('startup_backup_*/main.py')))
-        active=json.loads((self.root/'user_data/active.json').read_text())
-        self.assertEqual(active['previous_version'],'1.1.0')
-    def test_bad_download_cannot_touch_original_launcher_or_profile(self):
-        raw,m=self.package()
-        with self.assertRaises(ValueError):repair_start.repair(str(self.root),m,raw+b'bad')
-        self.assertEqual((self.root/'main.py').read_text(),'OLD_LAUNCHER = True\n')
-        self.assertEqual((self.root/'user_data/profile.json').read_bytes(),self.profile)
-        self.assertFalse((self.root/'user_data/active.json').exists())
-    def test_wrong_folder_is_rejected(self):
-        with self.assertRaises(ValueError):repair_start.repair(str(self.root/'user_data'),{},b'')
-    def test_repair_can_be_repeated_without_clearing_profile(self):
-        raw,m=self.package()
-        repair_start.repair(str(self.root),m,raw);repair_start.repair(str(self.root),m,raw)
-        self.assertEqual((self.root/'user_data/profile.json').read_bytes(),self.profile)
     def test_previous_incomplete_start_rolls_back(self):
         user=self.root/'user_data';(user/'active.json').write_text('{"version":"1.1.0"}')
         (user/'startup_state.json').write_text('{"version":"1.1.0","phase":"starting"}')

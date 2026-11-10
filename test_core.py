@@ -38,6 +38,11 @@ class Tests(unittest.TestCase):
     def test_today(self):
         self.assertEqual(self.lib.today(),self.lib.today())
         self.assertTrue(self.lib.today()['featured'])
+    def test_voice_backend_migrates_and_persists(self):
+        self.assertEqual(self.lib.user['voice_backend'],'auto')
+        self.lib.settings({'voice_backend':'web'})
+        self.assertEqual(Library(str(self.root)).user['voice_backend'],'web')
+        with self.assertRaises(ValueError):self.lib.settings({'voice_backend':'invalid'})
     def test_font_and_learning_persist(self):
         ident=self.lib.poems[-1]['id']
         self.lib.settings({'font_size':32})

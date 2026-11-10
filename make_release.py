@@ -1,5 +1,5 @@
 """Build full install ZIP + app update ZIP + manifest; never uploads."""
-import argparse, ast, hashlib, json, zipfile, shutil
+import argparse, ast, hashlib, json, zipfile
 from pathlib import Path
 ROOT=Path(__file__).resolve().parent
 EXCLUDED={'.git','__pycache__','user_data','releases','release_build','.github'}
@@ -20,10 +20,9 @@ def build(base_url, tag=None):
     with zipfile.ZipFile(str(full),'w',zipfile.ZIP_DEFLATED) as z:
         for p in sorted(ROOT.rglob('*')):
             relative=p.relative_to(ROOT)
-            if p.is_file() and not (set(relative.parts)&EXCLUDED) and p.suffix not in ('.pyc','.pyo') and p.name not in ('.DS_Store','.gitignore'):
+            if p.is_file() and not (set(relative.parts)&EXCLUDED) and p.suffix not in ('.pyc','.pyo') and p.name not in ('.DS_Store','.gitignore','repair_start.py'):
                 z.write(str(p),'ChinesePoetry/'+relative.as_posix())
-    shutil.copy2(str(ROOT/'repair_start.py'),str(out/'repair_start.py'))
-    (out/'SHA256SUMS.txt').write_text('\n'.join(hashlib.sha256(p.read_bytes()).hexdigest()+'  '+p.name for p in (full,target,out/'manifest.json',out/'repair_start.py'))+'\n',encoding='utf-8')
+    (out/'SHA256SUMS.txt').write_text('\n'.join(hashlib.sha256(p.read_bytes()).hexdigest()+'  '+p.name for p in (full,target,out/'manifest.json'))+'\n',encoding='utf-8')
     print('Built release '+version+' in '+str(out)+'; not uploaded.')
     return manifest
 

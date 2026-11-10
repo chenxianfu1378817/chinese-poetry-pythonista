@@ -11,7 +11,16 @@ def run(root):
     startup.mark(root,'starting',stage='before-ui-import')
     import ui
     lib=Library(root);speaker=Speaker();lock=threading.RLock();jobs=queue.Queue()
+    voice_notice=''
+    try:
+        with open(os.path.join(root,'user_data','voice_state.json'),encoding='utf-8') as f:previous_voice=json.load(f)
+        if previous_voice.get('phase') in ('before-say','requested','before-stop') and lib.user['voice_backend'] in ('auto','pythonista'):
+            lib.user['voice_backend']='web'
+            voice_notice='上次系统朗读未正常结束，本次改用网页朗读，可在设置中调整。'
+    except (OSError,ValueError,AttributeError):pass
     closed=threading.Event()
+    ui_thread_id=[None]
+    audio_closed=threading.Event()
     def on_ui(fn):
         def safe():
             if not closed.is_set():fn()
@@ -26,30 +35,49 @@ def run(root):
             with lock:result['user']=dict(lib.user)
         javascript('bridgeDone',result)
     def speech_status(message):javascript('speechStatus',message)
-    def stop_speech():
-        speaker.stop();speech_status('朗读已停止')
-    def speak_poem(ident):
+    def voice_mark(phase,detail=''):
         try:
-            p=lib.poem(ident)
-            text=p['title']+'。'+p['author']+'。'+''.join(p['paragraphs'])
-            label=speaker.speak(text);generation=speaker.generation
-            speech_status('已提交朗读 · '+label)
-            def check_start():
-                if closed.is_set() or speaker.generation!=generation:return
-                try:
-                    if speaker.is_speaking():speech_status('正在朗读 · '+speaker.language)
-                    elif speaker.backend=='Pythonista':
-                        label=speaker.retry(text)
-                        speech_status('已重试系统中文声音 · '+label)
-                        ui.delay(check_retry,0.7)
-                    else:speech_status('未检测到朗读，请检查媒体音量、音频输出和中文声音')
-                except Exception as e:speech_status('朗读未启动：'+str(e))
-            def check_retry():
-                if closed.is_set() or speaker.generation!=generation:return
-                speech_status('正在朗读 · '+speaker.language if speaker.is_speaking() else '未检测到朗读，请检查媒体音量、音频输出和中文声音')
-            ui.delay(check_start,0.7)
-        except Exception as e:speech_status('朗读失败：'+str(e)+'；请检查中文声音与媒体音量')
-        finally:finish()
+            from .core import atomic_json
+            atomic_json(os.path.join(root,'user_data','voice_state.json'),{
+                'version':VERSION,'backend':'pythonista','phase':phase,
+                'detail':detail,'at':datetime.datetime.now().isoformat(timespec='seconds')})
+        except OSError:pass
+    def audio_work(action,ident=None):
+        # ui.in_background targets Pythonista's interpreter thread. UI callbacks
+        # and ui.delay must never call the speech engine, including stop/close.
+        try:
+            if action=='speak' and (closed.is_set() or audio_closed.is_set()):return
+            if action=='speak' and lib.user['voice_backend'] not in ('auto','pythonista'):
+                raise ValueError('当前没有启用 Pythonista 朗读，请在设置中选择朗读方式')
+            if ui_thread_id[0] is not None and threading.get_ident()==ui_thread_id[0]:
+                raise RuntimeError('已阻止在界面线程调用系统语音，请选择网页朗读')
+            if action=='speak':
+                poem=lib.poem(ident)
+                text=poem['title']+'。'+poem['author']+'。'+''.join(poem['paragraphs'])
+                voice_mark('before-say','interpreter-thread')
+                speech_status(speaker.speak(text))
+                voice_mark('requested','interpreter-thread')
+            elif action=='stop':
+                if not speaker.active:return
+                voice_mark('before-stop','interpreter-thread')
+                speaker.stop();voice_mark('stopped','interpreter-thread')
+                speech_status('朗读已停止')
+        except Exception as e:
+            voice_mark('error',type(e).__name__)
+            speech_status('系统朗读未完成：'+str(e)+'。可在设置中选择网页朗读。')
+            javascript('nativeSpeechResult',{'ok':False,'active':speaker.active})
+        finally:
+            if action=='speak':finish()
+    background=getattr(ui,'in_background',None)
+    audio_action=background(audio_work) if callable(background) else None
+    def request_audio(action,ident=None):
+        if audio_action is None:
+            speech_status('此环境无法安全调度系统语音，请在设置中选择网页朗读')
+            if action=='speak':
+                javascript('nativeSpeechResult',{'ok':False,'active':False})
+                finish()
+            return
+        audio_action(action,ident)
     def key_available():
         try:return ai.has_key(lib.user['ai_endpoint'])
         except Exception:return False
@@ -87,12 +115,13 @@ def run(root):
             self.was_closed=True
             try:
                 if self.ready:
+                    self.web.evaluate_javascript('stopReading()')
                     raw=self.web.evaluate_javascript('JSON.stringify(draftSnapshot())')
                     data=json.loads(raw) if isinstance(raw,str) else raw
                     if isinstance(data,dict) and data.get('id') in lib.by_id:
                         with lock:lib.settings(data)
             except Exception:pass
-            closed.set();speaker.stop();jobs.put(None)
+            closed.set();audio_closed.set();request_audio('stop');jobs.put(None)
             startup.mark(root,'closed',stage='explicit-exit')
             if self in _ACTIVE_READERS:_ACTIVE_READERS.remove(self)
         def close(self):
@@ -115,6 +144,7 @@ def run(root):
                 if not closed.is_set():startup.mark(root,'ready',stage='webview-loaded')
             ui.delay(healthy,3.0)
         def webview_should_start_load(self,view,url,nav_type):
+            ui_thread_id[0]=threading.get_ident()
             if not url.startswith('poetry:'):
                 if url.startswith(('https://','http://')):
                     import webbrowser
@@ -127,8 +157,8 @@ def run(root):
                     on_ui(lambda:shell.select_tab(data.get('tab')));finish();return False
                 if action=='style':
                     on_ui(lambda:shell.select_tab(shell.active_tab,data));finish();return False
-                if action=='speak':on_ui(lambda:speak_poem(data['id']));return False
-                if action=='stop':on_ui(stop_speech);finish();return False
+                if action=='speak':request_audio('speak',data['id']);return False
+                if action=='stop':request_audio('stop');finish();return False
                 if action=='exit':on_ui(shell.close);return False
                 jobs.put((action,data))
             except Exception as e:finish('操作未完成：'+str(e))
@@ -143,6 +173,7 @@ def run(root):
             try:
                 if action=='save':
                     with lock:lib.settings(data)
+                    if 'voice_backend' in data:voice_mark('mode-selected',data['voice_backend'])
                     finish('手记已保存' if 'note' in data else None,True)
                 elif action=='favorite':
                     with lock:lib.favorite(data['id'])
@@ -176,7 +207,7 @@ def run(root):
             except Exception as e:finish('操作未完成：'+str(e))
     threading.Thread(target=worker,daemon=True).start()
     payload={'poems':lib.poems,'user':lib.user,'today':lib.today()['id'],'version':VERSION,
-             'native_shell':False,'readings':{p['id']:lib.reading(p['id']) for p in lib.poems if p.get('featured')}}
+             'native_shell':False,'voice_notice':voice_notice,'readings':{p['id']:lib.reading(p['id']) for p in lib.poems if p.get('featured')}}
     with open(os.path.join(os.path.dirname(__file__),'index.html'),encoding='utf-8') as f:html=f.read()
     html=html.replace('/*BOOTSTRAP*/','window.BOOT='+json.dumps(payload,ensure_ascii=True).replace('<','\\u003c')+';')
     _ACTIVE_READERS.append(shell)

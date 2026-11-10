@@ -32,5 +32,20 @@ class Button(View):pass
 class ButtonItem:
     def __init__(self,**kwargs):self.__dict__.update(kwargs)
 def fake_ui():
+    import queue,threading
+    tasks=queue.Queue()
+    def consume():
+        while True:
+            item=tasks.get()
+            if item is None:return
+            fn,args,kwargs=item
+            fn(*args,**kwargs)
+    interpreter=threading.Thread(target=consume,name='FakePythonistaInterpreter',daemon=True)
+    interpreter.start()
+    def in_background(fn):
+        def wrapped(*args,**kwargs):tasks.put((fn,args,kwargs))
+        return wrapped
+    def shutdown():tasks.put(None);interpreter.join(timeout=2)
     return types.SimpleNamespace(View=View,WebView=Web,Button=Button,ButtonItem=ButtonItem,
-        delay=lambda fn,seconds:fn() if not seconds else None)
+        delay=lambda fn,seconds:fn() if not seconds else None,
+        in_background=in_background,shutdown=shutdown)

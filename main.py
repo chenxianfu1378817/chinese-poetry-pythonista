@@ -56,7 +56,7 @@ def main():
             with open(os.path.join(ROOT,'poetry_app','core.py'),encoding='utf-8') as f:base=f.read()
             match=re.search(r"VERSION\s*=\s*['\"]([0-9.]+)",base)
             if match and match.group(1)=='1.1.0':
-                print('随包版本也是 1.1.0。请把 repair_start.py 放在本文件旁并运行，保留 user_data。')
+                print('随包版本也是 1.1.0。请从 GitHub 下载最新版，保留 user_data，不覆盖个人资料。')
                 return None
         except OSError:pass
     write_json(os.path.join(USER,'startup_state.json'),{'version':version or 'base','phase':'starting','stage':'launcher','at':datetime.datetime.now().isoformat(timespec='seconds')})

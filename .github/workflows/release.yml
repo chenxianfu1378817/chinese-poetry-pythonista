@@ -17,6 +17,8 @@ jobs:
           python-version: '3.9'
       - name: Test before publishing
         run: python -m unittest -v
+      - name: Validate embedded JavaScript
+        run: python check_frontend.py
       - name: Build and validate version
         env:
           TAG: ${{ github.ref_name }}
@@ -30,8 +32,9 @@ jobs:
           else
             git worktree add --detach update-publish HEAD
           fi
+          git -C update-publish rm --ignore-unmatch update_channel/repair_start.py
           mkdir -p update-publish/update_channel
-          cp release_build/*.zip release_build/manifest.json release_build/SHA256SUMS.txt release_build/repair_start.py update-publish/update_channel/
+          cp release_build/*.zip release_build/manifest.json release_build/SHA256SUMS.txt update-publish/update_channel/
           git -C update-publish config user.name "github-actions[bot]"
           git -C update-publish config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git -C update-publish add update_channel
@@ -48,7 +51,6 @@ jobs:
           release_build/poetry-*.zip
           release_build/manifest.json
           release_build/SHA256SUMS.txt
-          release_build/repair_start.py
           --repo "$REPO"
           --verify-tag
           --title "中华诗词 $TAG"

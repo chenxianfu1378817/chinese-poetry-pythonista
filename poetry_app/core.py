@@ -1,7 +1,7 @@
 import json, os, random, datetime, tempfile
 from .featured import EXTRA_POEMS
 from .learning import review_record
-VERSION = '1.3.0'
+VERSION = '1.4.0'
 DEFAULT_UPDATE_URL = 'https://raw.githubusercontent.com/chenxianfu1378817/chinese-poetry-pythonista/updates/update_channel/manifest.json'
 
 def atomic_json(path, value):
@@ -23,7 +23,7 @@ class Library:
         self.root=root
         self.path=os.path.join(root,'user_data','profile.json')
         self.user={'favorites':[],'notes':{},'theme':'活力橙','mode':'system','update_url':DEFAULT_UPDATE_URL,
-                   'speech_voice':'','speech_rate':0.9,'voice_backend':'web','font_size':23,'learning':{},'ai_cache':{},'ai_endpoint':'https://api.deepseek.com','ai_model':'deepseek-flash'}
+                   'text_script':'simplified','speech_voice':'','speech_rate':0.9,'voice_backend':'web','font_size':23,'learning':{},'ai_cache':{},'ai_endpoint':'https://api.deepseek.com','ai_model':'deepseek-flash'}
         if os.path.exists(self.path):
             with open(self.path,encoding='utf-8') as f:self.user.update(json.load(f))
         if not self.user.get('update_url') or self.user.get('update_url')=='https://github.com/chenxianfu1378817/chinese-poetry-pythonista/releases/latest/download/manifest.json':
@@ -32,6 +32,7 @@ class Library:
         if not self.user.get('ai_model'):self.user['ai_model']='deepseek-flash'
         if self.user.get('voice_backend') in ('auto','pythonista'):self.user['voice_backend']='web'
         if self.user.get('voice_backend') not in ('auto','web','pythonista','off'):self.user['voice_backend']='auto'
+        if self.user.get('text_script') not in ('original','simplified','traditional'):self.user['text_script']='simplified'
         self.user['font_size']=font_size(self.user.get('font_size'))
         with open(os.path.join(root,'data','poems.json'),encoding='utf-8') as f:self.poems=json.load(f)
         ids={p['id'] for p in self.poems}
@@ -55,6 +56,9 @@ class Library:
     def settings(self,data):
         for k in ('theme','mode','update_url','ai_endpoint','ai_model','speech_voice'):
             if k in data:self.user[k]=str(data[k])
+        if 'text_script' in data:
+            if data['text_script'] not in ('original','simplified','traditional'):raise ValueError('无效字形')
+            self.user['text_script']=data['text_script']
         if 'voice_backend' in data:
             if data['voice_backend'] not in ('auto','web','pythonista','off'):raise ValueError('未知朗读方式')
             self.user['voice_backend']=data['voice_backend']

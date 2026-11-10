@@ -55,6 +55,15 @@ class Tests(unittest.TestCase):
         self.assertEqual(reloaded.user['font_size'],40)
         reloaded.settings({'font_size':-1})
         self.assertEqual(reloaded.user['font_size'],16)
+    def test_text_script_migrates_and_persists(self):
+        self.assertEqual(self.lib.user['text_script'],'simplified')
+        ident=self.lib.poems[0]['id'];self.lib.favorite(ident)
+        self.lib.settings({'text_script':'original','id':ident,'note':'保留原字形筆記'})
+        reloaded=Library(str(self.root))
+        self.assertEqual(reloaded.user['text_script'],'original')
+        self.assertIn(ident,reloaded.user['favorites'])
+        self.assertEqual(reloaded.user['notes'][ident],'保留原字形筆記')
+        with self.assertRaises(ValueError):reloaded.settings({'text_script':'invalid'})
     def test_voice_preference_persists(self):
         value='["local-voice","Chinese Enhanced","zh-CN"]'
         self.lib.settings({'speech_voice':value,'speech_rate':0.8})

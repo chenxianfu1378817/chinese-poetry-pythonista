@@ -42,7 +42,7 @@ class Reader:
     def html(self):
         with open(os.path.join(os.path.dirname(__file__),'index.html'),encoding='utf-8') as f:s=f.read()
         with self.lock:payload=json.dumps(self.payload(),ensure_ascii=True).replace('<','\\u003c')
-        return s.replace('/*BOOTSTRAP*/','window.BOOT='+payload+';')
+        return s.replace('__CONVERTER_URL__',self.base+'converter').replace('/*BOOTSTRAP*/','window.BOOT='+payload+';')
     def action(self,action,data):
         if action=='ai':
             with self.lock:
@@ -94,6 +94,9 @@ class Reader:
                 self.send_header('Cache-Control','no-store');self.send_header('X-Content-Type-Options','nosniff')
                 self.send_header('Content-Length',str(len(body)));self.end_headers();self.wfile.write(body)
             def do_GET(self):
+                if self.valid() and hmac.compare_digest(self.path,'/'+reader.token+'/converter'):
+                    with open(os.path.join(os.path.dirname(__file__),'converter.html'),encoding='utf-8') as f:script=f.read()
+                    self.send(200,script,'application/javascript; charset=utf-8');return
                 if not self.valid() or not hmac.compare_digest(self.path,'/'+reader.token+'/'):
                     self.send(403,{'error':'拒绝访问'});return
                 self.send(200,reader.html(),'text/html; charset=utf-8')

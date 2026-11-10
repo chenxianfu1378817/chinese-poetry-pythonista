@@ -67,8 +67,8 @@ def rebuild(cache,output):
     assert len(selected)==report['count']
     assert dict(collections.Counter(p['author_key'] for p in selected))==report['authors']
     raw=json.dumps(selected,ensure_ascii=False,separators=(',',':')).encode()
-    packed=base64.b85encode(zlib.compress(raw,9)).decode()
-    code='"""Offline curated corpus. Source and hashes: data/CORPUS_REPORT.json. MIT data."""\nimport base64,zlib,json,functools\n_DATA = '+repr(packed)+'\n@functools.lru_cache(maxsize=1)\ndef load():\n    return json.loads(zlib.decompress(base64.b85decode(_DATA)).decode("utf-8"))\nMAJOR_AUTHORS = '+repr(report['major_authors'])+'\nCHAR_MAP = '+repr(normalized['map'])+'\n'
+    packed=base64.b64encode(zlib.compress(raw,9)).decode()
+    code='"""Offline curated corpus. Source and hashes: data/CORPUS_REPORT.json. MIT data."""\nimport base64,zlib,json,functools\n_DATA = '+repr(packed)+'\n@functools.lru_cache(maxsize=1)\ndef load():\n    return json.loads(zlib.decompress(base64.b64decode(_DATA)).decode("utf-8"))\nMAJOR_AUTHORS = '+repr(report['major_authors'])+'\nCHAR_MAP = '+repr(normalized['map'])+'\n'
     output.write_text(code,encoding='utf-8');print('Rebuilt',len(selected),'records:',output)
 
 if __name__=='__main__':

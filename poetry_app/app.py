@@ -38,8 +38,7 @@ class Reader:
         return result.get('value')
     def payload(self):
         return {'poems':self.lib.poems,'user':self.lib.user,'today':self.lib.today()['id'],
-            'version':VERSION,'native_shell':False,'api_url':self.base+'api',
-            'readings':{p['id']:self.lib.reading(p['id']) for p in self.lib.poems if p.get('featured')}}
+            'version':VERSION,'native_shell':False,'api_url':self.base+'api'}
     def html(self):
         with open(os.path.join(os.path.dirname(__file__),'index.html'),encoding='utf-8') as f:s=f.read()
         with self.lock:payload=json.dumps(self.payload(),ensure_ascii=True).replace('<','\\u003c')

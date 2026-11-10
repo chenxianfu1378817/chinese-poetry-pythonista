@@ -55,10 +55,14 @@ class Tests(unittest.TestCase):
         self.assertEqual(reloaded.user['font_size'],40)
         reloaded.settings({'font_size':-1})
         self.assertEqual(reloaded.user['font_size'],16)
-    def test_offline_reading(self):
-        self.assertIn('translation',self.lib.reading(self.lib.poems[-1]['id']))
-        self.assertIn('通用',self.lib.reading(self.lib.poems[0]['id'])['credit'])
-
+    def test_voice_preference_persists(self):
+        value='["local-voice","Chinese Enhanced","zh-CN"]'
+        self.lib.settings({'speech_voice':value,'speech_rate':0.8})
+        reloaded=Library(str(self.root))
+        self.assertEqual(reloaded.user['speech_voice'],value)
+        self.assertEqual(reloaded.user['speech_rate'],0.8)
+        reloaded.settings({'speech_rate':3})
+        self.assertEqual(reloaded.user['speech_rate'],1.2)
     def test_update_preserves_user(self):
         self.lib.favorite(self.lib.poems[0]['id']);before=(self.root/'user_data/profile.json').read_bytes()
         raw,m=self.package();updater.install(str(self.root),m,raw)

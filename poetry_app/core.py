@@ -1,7 +1,7 @@
 import json, os, random, datetime, tempfile
-from .featured import EXTRA_POEMS, READINGS
+from .featured import EXTRA_POEMS
 from .learning import review_record
-VERSION = '1.2.0'
+VERSION = '1.3.0'
 DEFAULT_UPDATE_URL = 'https://raw.githubusercontent.com/chenxianfu1378817/chinese-poetry-pythonista/updates/update_channel/manifest.json'
 
 def atomic_json(path, value):
@@ -23,7 +23,7 @@ class Library:
         self.root=root
         self.path=os.path.join(root,'user_data','profile.json')
         self.user={'favorites':[],'notes':{},'theme':'活力橙','mode':'system','update_url':DEFAULT_UPDATE_URL,
-                   'voice_backend':'web','font_size':23,'learning':{},'ai_cache':{},'ai_endpoint':'https://api.deepseek.com','ai_model':'deepseek-flash'}
+                   'speech_voice':'','speech_rate':0.9,'voice_backend':'web','font_size':23,'learning':{},'ai_cache':{},'ai_endpoint':'https://api.deepseek.com','ai_model':'deepseek-flash'}
         if os.path.exists(self.path):
             with open(self.path,encoding='utf-8') as f:self.user.update(json.load(f))
         if not self.user.get('update_url') or self.user.get('update_url')=='https://github.com/chenxianfu1378817/chinese-poetry-pythonista/releases/latest/download/manifest.json':
@@ -53,11 +53,14 @@ class Library:
         else:f.append(ident)
         self.save()
     def settings(self,data):
-        for k in ('theme','mode','update_url','ai_endpoint','ai_model'):
+        for k in ('theme','mode','update_url','ai_endpoint','ai_model','speech_voice'):
             if k in data:self.user[k]=str(data[k])
         if 'voice_backend' in data:
             if data['voice_backend'] not in ('auto','web','pythonista','off'):raise ValueError('未知朗读方式')
             self.user['voice_backend']=data['voice_backend']
+        if 'speech_rate' in data:
+            try:self.user['speech_rate']=max(0.6,min(1.2,float(data['speech_rate'])))
+            except (ValueError,TypeError):raise ValueError('无效语速')
         if 'font_size' in data:self.user['font_size']=font_size(data['font_size'])
         if 'note' in data:
             self.poem(data['id']);self.user['notes'][data['id']]=str(data['note'])
@@ -66,9 +69,3 @@ class Library:
         self.poem(ident)
         self.user['learning'][ident]=review_record(self.user['learning'].get(ident),mastered,score)
         self.save()
-    def reading(self,ident):
-        p=self.poem(ident)
-        return READINGS.get(ident) or {'analysis':'本首暂未收录逐篇离线赏析。先把每句景物、动作与情绪分别圈出，再思考它们怎样连成一幅画面。',
-            'imagery':'从原文中选择一到两个反复出现或最有感触的词，比较它们在不同句子中的作用。',
-            'question':'诗的开头和结尾，视角或情感有什么变化？请从原文找出依据。',
-            'credit':'通用研读提示，并非本诗的白话翻译或逐句注释。'}

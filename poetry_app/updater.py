@@ -41,11 +41,15 @@ def install(root, manifest, payload=None):
                 if name.endswith('.py'): compile(content, name, 'exec')
                 dest = os.path.join(stage, name); os.makedirs(os.path.dirname(dest), exist_ok=True)
                 with open(dest, 'wb') as f: f.write(content)
-            required = {'poetry_app/__init__.py','poetry_app/app.py','poetry_app/core.py','poetry_app/updater.py','poetry_app/index.html','poetry_app/voice.py','poetry_app/learning.py','poetry_app/ai.py','poetry_app/featured.py'}
+            required = {'poetry_app/__init__.py','poetry_app/app.py','poetry_app/core.py','poetry_app/updater.py','poetry_app/index.html','poetry_app/voice.py','poetry_app/learning.py','poetry_app/ai.py','poetry_app/featured.py','poetry_app/startup.py'}
             if not required.issubset(names): raise ValueError('更新文件不完整')
         target = os.path.join(releases, version)
         if os.path.exists(target): raise ValueError('此版本已安装；请先回退再清理对应版本目录')
         os.replace(stage, target)
-        atomic_json(os.path.join(root,'user_data','active.json'), {'version': version})
+        previous=None
+        try:
+            with open(os.path.join(root,'user_data','active.json'),encoding='utf-8') as f:previous=json.load(f).get('version')
+        except (OSError,ValueError,AttributeError):pass
+        atomic_json(os.path.join(root,'user_data','active.json'), {'version':version,'previous_version':previous})
     finally:
         if os.path.exists(stage): shutil.rmtree(stage)

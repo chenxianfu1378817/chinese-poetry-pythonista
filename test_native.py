@@ -15,26 +15,16 @@ class VoiceTests(unittest.TestCase):
             speaker=Speaker();speaker.speak('山居秋暝')
             speech.say.assert_called_once_with('山居秋暝',language='zh_CN',rate=0.43)
             self.assertTrue(speaker.is_speaking());speaker.stop();speech.stop.assert_called()
-    def test_native_fallback(self):
-        speech=types.SimpleNamespace(get_synthesis_languages=lambda:['zh-CN'],say=Mock(side_effect=RuntimeError('unavailable')),stop=Mock())
+    def test_older_speech_without_rate(self):
+        speech=types.SimpleNamespace(get_synthesis_languages=lambda:['zh-CN'],say=Mock(side_effect=[TypeError('rate unsupported'),None]),stop=Mock())
         with patch.dict(sys.modules,{'speech':speech}):
-            speaker=Speaker()
-            with patch.object(speaker,'speak_native') as fallback:
-                speaker.speak('春晓');fallback.assert_called_once_with('春晓')
-    def test_native_synthesizer_is_retained(self):
-        synth=Mock();voice=Mock();voice.language.return_value='zh-CN'
-        voice_class=Mock();voice_class.speechVoices.return_value=[voice]
-        voice_class.voiceWithLanguage_.return_value=voice
-        synth_class=Mock();synth_class.alloc.return_value.init.return_value=synth
-        utterance=Mock();utterance_class=Mock();utterance_class.speechUtteranceWithString_.return_value=utterance
-        session_class=Mock()
-        classes={'AVSpeechSynthesisVoice':voice_class,'AVSpeechSynthesizer':synth_class,'AVSpeechUtterance':utterance_class,'AVAudioSession':session_class}
-        with patch.dict(sys.modules,{'objc_util':types.SimpleNamespace(ObjCClass=lambda name:classes[name])}):
-            speaker=Speaker();speaker.speak_native('山居秋暝')
-            self.assertIs(speaker.synth,synth)
-            utterance.setVoice_.assert_called_once_with(voice)
-            synth.speakUtterance_.assert_called_once_with(utterance)
-            speaker.stop();synth.stopSpeakingAtBoundary_.assert_called_with(0)
+            speaker=Speaker();speaker.speak('春晓')
+            self.assertEqual(speech.say.call_args.kwargs,{'language':'zh-CN'})
+    def test_retry_uses_another_installed_chinese_locale(self):
+        speech=types.SimpleNamespace(get_synthesis_languages=lambda:['zh_CN','zh_TW'],say=Mock(),stop=Mock())
+        with patch.dict(sys.modules,{'speech':speech}):
+            speaker=Speaker();speaker.speak('春晓');speaker.retry('春晓')
+            self.assertEqual(speech.say.call_args.kwargs['language'],'zh_TW')
     def test_chinese_voice_priority(self):
         self.assertEqual(Speaker.choose_language(['en_US','zh_TW','zh_CN']),'zh_CN')
         self.assertIsNone(Speaker.choose_language(['en-US']))
@@ -61,12 +51,21 @@ class NativeTests(unittest.TestCase):
             if len([s for s in web.scripts if s.startswith('bridgeDone(')])>count:return
             time.sleep(.005)
         self.fail('Bridge did not acknowledge '+action)
-    def test_native_bar_independent_from_webview(self):
-        self.assertEqual(len(self.shell.buttons),5)
-        self.shell.width=320;self.shell.height=568;self.shell.layout()
-        self.assertEqual(self.shell.web.frame[1]+self.shell.web.frame[3],self.shell.bar.frame[1])
-        self.assertEqual(self.shell.right_button_items[0].title,'退出')
+    def test_standard_webview_and_retained_reader(self):
+        import gc
+        from poetry_app.app import _ACTIVE_READERS
+        self.assertEqual(self.shell.web.presented,'fullscreen')
+        self.assertEqual(self.shell.web.right_button_items[0].title,'退出')
+        gc.collect();self.assertIn(self.shell,_ACTIVE_READERS)
+        payload=json.loads(self.shell.web.html.split('window.BOOT=',1)[1].split(';\nconst themes=',1)[0])
+        self.assertFalse(payload['native_shell'])
         self.send('navigate',{'tab':'learn'});self.assertEqual(self.shell.active_tab,'learn')
+    def test_startup_breadcrumbs_do_not_include_profile(self):
+        state=json.loads((self.root/'user_data/startup_state.json').read_text())
+        self.assertEqual(state['phase'],'starting')
+        self.assertNotIn('notes',state);self.assertNotIn('favorites',state)
+        self.shell.close()
+        self.assertEqual(json.loads((self.root/'user_data/startup_state.json').read_text())['phase'],'closed')
     def test_saves_are_serialized_and_exit_keeps_draft(self):
         ident=Library(str(self.root)).poems[0]['id']
         self.send('favorite',{'id':ident});self.send('save',{'font_size':31})

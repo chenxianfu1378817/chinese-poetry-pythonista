@@ -1,11 +1,14 @@
-"""Native fixed navigation and WebView content for Pythonista 3."""
+"""Standard Pythonista WebView reader with retained lifecycle and startup markers."""
 import os, json, threading, queue, datetime
 from urllib.parse import unquote
 from .core import Library, VERSION
 from .voice import Speaker
-from . import updater, ai
+from . import updater, ai, startup
+
+_ACTIVE_READERS=[]
 
 def run(root):
+    startup.mark(root,'starting',stage='before-ui-import')
     import ui
     lib=Library(root);speaker=Speaker();lock=threading.RLock();jobs=queue.Queue()
     closed=threading.Event()
@@ -36,12 +39,12 @@ def run(root):
                 try:
                     if speaker.is_speaking():speech_status('正在朗读 · '+speaker.language)
                     elif speaker.backend=='Pythonista':
-                        label=speaker.speak_native(text)
-                        speech_status('已切换备用声音 · '+label)
-                        ui.delay(check_native,0.7)
+                        label=speaker.retry(text)
+                        speech_status('已重试系统中文声音 · '+label)
+                        ui.delay(check_retry,0.7)
                     else:speech_status('未检测到朗读，请检查媒体音量、音频输出和中文声音')
                 except Exception as e:speech_status('朗读未启动：'+str(e))
-            def check_native():
+            def check_retry():
                 if closed.is_set() or speaker.generation!=generation:return
                 speech_status('正在朗读 · '+speaker.language if speaker.is_speaking() else '未检测到朗读，请检查媒体音量、音频输出和中文声音')
             ui.delay(check_start,0.7)
@@ -62,48 +65,26 @@ def run(root):
                 javascript('receiveAI',{'id':ident,'record':record})
             except Exception as e:javascript('receiveAI',{'id':ident,'error':str(e)})
         threading.Thread(target=worker,daemon=True).start()
-    class Shell(ui.View):
+    class Shell:
+        # A normal Python controller retains a standard, documented WebView.
+        # No UIView subclass callbacks, Objective-C calls or struct-return bridges.
         def __init__(self):
-            super().__init__()
-            self.name='中华诗词 · '+VERSION;self.background_color='#fff7ef'
-            self.ready=False;self.active_tab='home';self.buttons=[]
-            self.web=ui.WebView();self.bar=ui.View();self.bar.background_color='white'
-            self.add_subview(self.web);self.add_subview(self.bar)
-            for tab,title in [('home','今日'),('library','诗库'),('learn','学习'),('favorites','收藏'),('settings','设置')]:
-                button=ui.Button(title=title);button.name=tab;button.corner_radius=12
-                button.font=('<System-Bold>',15)
-                button.action=lambda sender:self.web.evaluate_javascript('go('+json.dumps(sender.name)+')')
-                self.buttons.append(button);self.bar.add_subview(button)
-            self.right_button_items=[ui.ButtonItem(title='退出',action=lambda sender:self.request_exit(),tint_color='#f47725')]
-            self.colors={'card':'#ffffff','ink':'#2b2724','soft':'#fff0df','bg':'#fff7ef'}
-            self.select_tab('home')
-        def layout(self):
-            if not hasattr(self,'bar'):return
-            bottom=20
-            try:
-                from objc_util import ObjCInstance
-                bottom=max(12,min(40,float(ObjCInstance(self).safeAreaInsets().bottom)))
-            except Exception:pass
-            h=58+bottom;w=self.width
-            self.web.frame=(0,0,w,max(0,self.height-h))
-            self.bar.frame=(0,max(0,self.height-h),w,h)
-            for i,b in enumerate(self.buttons):b.frame=(8+i*(w-16)/5,8,(w-16)/5-4,42)
+            startup.mark(root,'starting',stage='create-webview')
+            self.web=ui.WebView(name='中华诗词 · '+VERSION)
+            self.ready=False;self.active_tab='home';self.was_closed=False
+            try:self.web.will_close=self.cleanup
+            except (AttributeError,TypeError):pass
+            self.web.right_button_items=[ui.ButtonItem(title='退出',action=lambda sender:self.request_exit(),tint_color='#f47725')]
         def select_tab(self,tab,colors=None):
             if tab in ('home','library','learn','favorites','settings'):self.active_tab=tab
-            if colors:
-                for name in self.colors:
-                    value=colors.get(name,'')
-                    if isinstance(value,str) and value.startswith('#') and len(value) in (4,7):self.colors[name]=value
-            self.background_color=self.colors['bg'];self.bar.background_color=self.colors['card']
-            for b in self.buttons:
-                b.tint_color='#f47725' if b.name==self.active_tab else self.colors['ink']
-                b.background_color=self.colors['soft'] if b.name==self.active_tab else self.colors['card']
         def request_exit(self):
             if self.ready:
                 try:self.web.evaluate_javascript('requestExit()');return
                 except Exception:pass
             self.close()
-        def will_close(self):
+        def cleanup(self):
+            if self.was_closed:return
+            self.was_closed=True
             try:
                 if self.ready:
                     raw=self.web.evaluate_javascript('JSON.stringify(draftSnapshot())')
@@ -112,9 +93,27 @@ def run(root):
                         with lock:lib.settings(data)
             except Exception:pass
             closed.set();speaker.stop();jobs.put(None)
+            startup.mark(root,'closed',stage='explicit-exit')
+            if self in _ACTIVE_READERS:_ACTIVE_READERS.remove(self)
+        def close(self):
+            self.cleanup()
+            self.web.close()
+        def present(self):
+            startup.mark(root,'starting',stage='present-webview')
+            self.web.present('fullscreen')
+            def watch_close():
+                if closed.is_set():return
+                if not getattr(self.web,'on_screen',True):
+                    self.cleanup();return
+                ui.delay(watch_close,1.0)
+            ui.delay(watch_close,1.0)
     shell=Shell();web=shell.web
     class Delegate:
-        def webview_did_finish_load(self,view):shell.ready=True
+        def webview_did_finish_load(self,view):
+            shell.ready=True
+            def healthy():
+                if not closed.is_set():startup.mark(root,'ready',stage='webview-loaded')
+            ui.delay(healthy,3.0)
         def webview_should_start_load(self,view,url,nav_type):
             if not url.startswith('poetry:'):
                 if url.startswith(('https://','http://')):
@@ -177,9 +176,14 @@ def run(root):
             except Exception as e:finish('操作未完成：'+str(e))
     threading.Thread(target=worker,daemon=True).start()
     payload={'poems':lib.poems,'user':lib.user,'today':lib.today()['id'],'version':VERSION,
-             'native_shell':True,'readings':{p['id']:lib.reading(p['id']) for p in lib.poems if p.get('featured')}}
+             'native_shell':False,'readings':{p['id']:lib.reading(p['id']) for p in lib.poems if p.get('featured')}}
     with open(os.path.join(os.path.dirname(__file__),'index.html'),encoding='utf-8') as f:html=f.read()
     html=html.replace('/*BOOTSTRAP*/','window.BOOT='+json.dumps(payload,ensure_ascii=True).replace('<','\\u003c')+';')
+    _ACTIVE_READERS.append(shell)
+    startup.mark(root,'starting',stage='load-html')
     web.load_html(html)
-    shell.present('fullscreen',hide_close_button=True)
+    try:shell.present()
+    except Exception:
+        shell.close()
+        raise
     return shell

@@ -1,14 +1,20 @@
 # 中华诗词 · Pythonista 3
 
-活力橙圆角卡片界面，2,315 首离线诗词。原生固定导航与退出按钮，16–40 级字号；支持全文搜索、唐诗/宋词/诗经分类、收藏、今日诗词、随机阅读、中文朗读、学习手记、八套主题与三种外观。
+活力橙圆角卡片界面，2,315 首离线诗词。独立滚动导航与退出按钮，16–40 级字号；支持全文搜索、唐诗/宋词/诗经分类、收藏、今日诗词、随机阅读、中文朗读、学习手记、八套主题与三种外观。
 
 新增：十首入门诗词离线赏析、遮盖/填空/默写背诵与复习进度，以及可自行配置服务的 AI 解诗。
 
-[下载最新版](https://github.com/chenxianfu1378817/chinese-poetry-pythonista/releases/latest) · [直连安装包](https://raw.githubusercontent.com/chenxianfu1378817/chinese-poetry-pythonista/updates/update_channel/ChinesePoetry-1.1.0.zip) · [安装与备份说明](安装使用说明.md) · [更新记录](CHANGELOG.md) · [异常反馈](https://github.com/chenxianfu1378817/chinese-poetry-pythonista/issues)
+[下载最新版](https://github.com/chenxianfu1378817/chinese-poetry-pythonista/releases/latest) · [直连安装包](https://raw.githubusercontent.com/chenxianfu1378817/chinese-poetry-pythonista/updates/update_channel/ChinesePoetry-1.1.1.zip) · [安装与备份说明](安装使用说明.md) · [更新记录](CHANGELOG.md) · [异常反馈](https://github.com/chenxianfu1378817/chinese-poetry-pythonista/issues)
+
+## 1.1.0 打不开时的恢复
+
+下载 [repair_start.py](https://raw.githubusercontent.com/chenxianfu1378817/chinese-poetry-pythonista/updates/update_channel/repair_start.py)，放在**原 main.py 同一文件夹**，在 Pythonista 运行一次。看到“修复完成”后再运行 main.py。不要删除或覆盖 user_data。修复脚本不打开阅读界面，会备份旧启动器、验证更新并安装兼容版；正常更新只替换程序模块，此次需要同时更新启动器。
+
+新启动器记录启动阶段，发生未完成启动时在下一次运行回退；Python 报错写入 user_data/startup_error.txt。无法捕获操作系统直接终止进程，但会留下启动阶段记录。当前未获得设备崩溃日志，移除的是高风险兼容性路径，仍需手机复验。
 
 ## 安装与更新
 
-首次安装：下载 **ChinesePoetry-1.1.0.zip**，在 iPhone「文件」中解压，把整个 ChinesePoetry 文件夹放入 Pythonista 3，运行 main.py。不需要额外 Python 依赖或 GitHub 账号。
+首次安装：下载 **ChinesePoetry-1.1.1.zip**，在 iPhone「文件」中解压，把整个 ChinesePoetry 文件夹放入 Pythonista 3，运行 main.py。不需要额外 Python 依赖或 GitHub 账号。
 
 已有用户：**设置 → 检查更新 → 安装 → 退出阅读器 → 再运行 main.py**。收藏、手记、主题、字号和学习进度保留，不必重装诗库。1.0.0 用户首次需保存以下更新地址，新版已内置：
 
@@ -18,13 +24,13 @@ https://raw.githubusercontent.com/chenxianfu1378817/chinese-poetry-pythonista/up
 
 ## 阅读、赏析与背诵
 
-首页四入口：诗词搜索、分类阅读、学习背诵、AI 解诗。今日诗词可直接朗读、赏析与收藏。底栏是独立的 Pythonista 原生控件，网页长文在单独区域滚动。
+首页四入口：诗词搜索、分类阅读、学习背诵、AI 解诗。今日诗词可直接朗读、赏析与收藏。底栏与网页长文分区布局，长文在独立区域滚动；1.1.1 使用标准 WebView，避免启动时的底层安全区调用。
 
 详情有「原文、赏析、背诵、AI 解诗」四页。十首入门诗有编辑撰写的白话理解、意象赏析与思考题，其余诗文提供明确标注的通用研读提示。背诵支持遮盖、逐句揭示、填空提示和默写自测；默写忽略标点空白，保留原文字形。学习中、已背熟和复习日期保存在本地。
 
 字号可在阅读页或设置中逐级调节并保存。退出按钮会保存正在编辑的手记、停止朗读，并返回 Pythonista，不强制终止整个 Pythonista 应用。
 
-朗读自动选择手机可用的中文声音，以关键字传参，增加 AVSpeechSynthesizer 备用通道和启动状态。若未出声，请检查媒体音量、蓝牙输出与中文语音下载。实际设备输出仍需真机确认。
+朗读自动选择手机可用的中文声音，以关键字传参，仅使用 Pythonista 官方 speech API，增加备用中文语言重试和启动状态。若未出声，请检查媒体音量、蓝牙输出与中文语音下载。实际设备输出仍需真机确认。
 
 ## AI 解诗
 

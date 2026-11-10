@@ -1,7 +1,7 @@
-"""Retained Chinese TTS controller. Call on the iOS UI thread."""
+"""Chinese TTS using only Pythonista's documented speech API."""
 class Speaker:
     def __init__(self):
-        self.module=None;self.synth=None;self.backend='';self.language='';self.generation=0
+        self.module=None;self.backend='';self.language='';self.generation=0;self.languages=[]
     @staticmethod
     def choose_language(languages):
         languages=list(languages)
@@ -9,52 +9,31 @@ class Speaker:
             for lang in languages:
                 if str(lang).replace('_','-').lower()==preferred:return str(lang)
         return next((str(x) for x in languages if str(x).replace('_','-').lower().startswith('zh')),None)
-    def _audio_session(self):
-        # Playback category also permits speech while the silent switch is on.
-        try:
-            from objc_util import ObjCClass
-            session=ObjCClass('AVAudioSession').sharedInstance()
-            session.setCategory_error_('AVAudioSessionCategoryPlayback',None)
-            session.setActive_error_(True,None)
-        except Exception:pass
+    def _say(self,text,language):
+        try:self.module.say(text,language=language,rate=0.43)
+        except TypeError:
+            # Older builds may not accept rate; still use their installed locale.
+            self.module.say(text,language=language)
+        self.backend='Pythonista';self.language=language
+        return self.backend+' · '+language
     def speak(self,text):
         if not str(text).strip():raise ValueError('没有可朗读的内容')
-        self.stop();self._audio_session()
-        try:
-            import speech
-            lang=self.choose_language(speech.get_synthesis_languages())
-            if not lang:raise ValueError('没有中文声音')
-            # Pythonista versions differ in positional argument acceptance.
-            speech.say(text,language=lang,rate=0.43)
-            self.module=speech;self.backend='Pythonista';self.language=lang
-        except Exception:
-            self.speak_native(text)
-        return self.backend+' · '+self.language
-    def speak_native(self,text):
-        if self.module:
-            try:self.module.stop()
-            except Exception:pass
-        from objc_util import ObjCClass
-        self._audio_session()
-        Voice=ObjCClass('AVSpeechSynthesisVoice')
-        lang=self.choose_language(str(v.language()) for v in Voice.speechVoices())
+        self.stop()
+        import speech
+        self.module=speech
+        self.languages=[str(x) for x in speech.get_synthesis_languages() if str(x).replace('_','-').lower().startswith('zh')]
+        lang=self.choose_language(self.languages)
         if not lang:raise RuntimeError('未找到中文声音，请在 iPhone 设置中下载中文语音后重试')
-        if self.synth is None:self.synth=ObjCClass('AVSpeechSynthesizer').alloc().init()
-        self.synth.stopSpeakingAtBoundary_(0)
-        utterance=ObjCClass('AVSpeechUtterance').speechUtteranceWithString_(text)
-        utterance.setVoice_(Voice.voiceWithLanguage_(lang));utterance.setRate_(0.43)
-        self.synth.speakUtterance_(utterance)
-        self.backend='iOS 系统';self.language=lang
-        return self.backend+' · '+lang
-    def is_speaking(self):
-        if self.backend=='Pythonista' and self.module:return bool(self.module.is_speaking())
-        return bool(self.synth and self.synth.isSpeaking())
+        return self._say(text,lang)
+    def retry(self,text):
+        if not self.module:raise RuntimeError('系统语音尚未准备好')
+        self.module.stop()
+        lang=next((x for x in self.languages if x!=self.language),self.language)
+        return self._say(text,lang)
+    def is_speaking(self):return bool(self.module and self.module.is_speaking())
     def stop(self):
         self.generation+=1
         if self.module:
             try:self.module.stop()
-            except Exception:pass
-        if self.synth:
-            try:self.synth.stopSpeakingAtBoundary_(0)
             except Exception:pass
         self.backend=''

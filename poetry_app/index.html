@@ -8,7 +8,7 @@
 const themes={'活力橙':['#fff7ef','#fff','#fff0df'],'奶油杏':['#f5efdf','#fffdf7','#eee5d0'],'桃花粉':['#fff0f3','#fffafb','#fce0e8'],'竹叶青':['#eff5ed','#fcfffa','#dfebd8'],'晴空蓝':['#eef5fb','#fbfdff','#dceaf6'],'暮山紫':['#f3eff9','#fdfbff','#e8dff4'],'墨香灰':['#f1f1ee','#fff','#e2e3de'],'赤陶棕':['#f8eee7','#fffcf8','#eeded0']};
 const DEFAULT_UPDATE_URL='https://raw.githubusercontent.com/chenxianfu1378817/chinese-poetry-pythonista/updates/update_channel/manifest.json';
 let demo=!window.BOOT;
-let boot=window.BOOT||{poems:[],user:{},version:'1.1.0',readings:{}};
+let boot=window.BOOT||{poems:[],user:{},version:'1.1.1',readings:{}};
 let user=Object.assign({favorites:[],notes:{},theme:'活力橙',mode:'system',update_url:DEFAULT_UPDATE_URL,font_size:23,learning:{},ai_cache:{},ai_endpoint:'',ai_model:''},boot.user);
 let poems=boot.poems,tab='home',query='',category='',selected=null,detailMode='read',limit=40,studyMode='cover',revealed=0,aiBusy={},speechMessage='',nativeStyle='',toastTimer=null;
 const $=id=>document.getElementById(id),esc=x=>String(x==null?'':x).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));

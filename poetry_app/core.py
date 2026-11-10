@@ -1,7 +1,7 @@
 import json, os, random, datetime, tempfile
 from .featured import EXTRA_POEMS, READINGS
 from .learning import review_record
-VERSION = '1.1.0'
+VERSION = '1.1.1'
 DEFAULT_UPDATE_URL = 'https://raw.githubusercontent.com/chenxianfu1378817/chinese-poetry-pythonista/updates/update_channel/manifest.json'
 
 def atomic_json(path, value):

@@ -1,0 +1,15 @@
+{
+  "repository": "https://github.com/chinese-poetry/chinese-poetry",
+  "retrieved": "2026-11-10",
+  "files": [
+    "全唐诗/poet.tang.0.json",
+    "宋词/ci.song.0.json",
+    "诗经/shijing.json"
+  ],
+  "count": 2305,
+  "sha256": {
+    "poet.tang.0.json": "4f88f429938082523cdc72a1612bd7a7c3e3f7a33f8192c61ae51340efc3c92d",
+    "ci.song.0.json": "7761bc5ef50305753ea3dcea9e1ef3164e153e3ee366169e9c5a9a7d85b21b22",
+    "shijing.json": "3c7ca54d59424542ada99adfcc85420287fbbd5c8a511e9baf705cb2b04051e7"
+  }
+}

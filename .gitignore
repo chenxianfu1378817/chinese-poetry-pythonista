@@ -1,0 +1,6 @@
+__pycache__/
+*.py[cod]
+.DS_Store
+user_data/
+releases/
+release_build/

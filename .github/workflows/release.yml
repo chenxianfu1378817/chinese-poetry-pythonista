@@ -1,0 +1,36 @@
+name: Publish release
+on:
+  push:
+    tags: ['v*']
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
+      - name: Test before publishing
+        run: python -m unittest -v
+      - name: Build and validate version
+        env:
+          TAG: ${{ github.ref_name }}
+          REPO: ${{ github.repository }}
+        run: python make_release.py --tag "$TAG" --base-url "https://github.com/$REPO/releases/download/$TAG"
+      - name: Publish installation and update assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+          REPO: ${{ github.repository }}
+        run: >-
+          gh release create "$TAG"
+          release_build/ChinesePoetry-*.zip
+          release_build/poetry-*.zip
+          release_build/manifest.json
+          release_build/SHA256SUMS.txt
+          --repo "$REPO"
+          --verify-tag
+          --title "中华诗词 $TAG"
+          --notes-file RELEASE_NOTES.md

@@ -26,7 +26,7 @@ https://raw.githubusercontent.com/chenxianfu1378817/chinese-poetry-pythonista/up
 
 修改源码、增加 `poetry_app/core.py` 的 VERSION，更新 CHANGELOG.md 和 RELEASE_NOTES.md，提交并推送 `v版本号` 标签。GitHub Actions 通过测试后自动生成并发布完整安装 ZIP、增量更新 ZIP、SHA256SUMS 和 manifest.json，同时把文件发布到独立 updates 分支，应用默认通过 GitHub raw HTTPS 直连通道更新。应用更新包仅包含 `poetry_app` 模块；`main.py` 启动器或离线数据的变更需重新导入完整安装包，并保留用户数据。
 
-本地验证：`python3 -m unittest -v`。本地打包：`python3 make_release.py --tag v1.0.3 --base-url https://raw.githubusercontent.com/chenxianfu1378817/chinese-poetry-pythonista/updates/update_channel`。打包工具不会自行上传。
+本地验证：`python3 -m unittest -v`。发布后可运行 `python3 verify_online_update.py`，通过真实公开 HTTPS 下载、安装及启动验证个人资料保留；仓库 Actions 也提供手动线上验证入口。本地打包：`python3 make_release.py --tag v1.0.3 --base-url https://raw.githubusercontent.com/chenxianfu1378817/chinese-poetry-pythonista/updates/update_channel`。打包工具不会自行上传。
 
 若 Release 附件无法下载，可使用 [直连安装包](https://raw.githubusercontent.com/chenxianfu1378817/chinese-poetry-pythonista/updates/update_channel/ChinesePoetry-1.0.3.zip)。
 

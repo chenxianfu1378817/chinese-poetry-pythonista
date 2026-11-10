@@ -1,0 +1,19 @@
+name: Verify published online update
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
+      - name: Download public assets, install and check user preservation
+        run: python verify_online_update.py --output "$RUNNER_TEMP/online-result.json"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: online-update-verification
+          path: ${{ runner.temp }}/online-result.json

@@ -52,3 +52,5 @@ jobs:
           --verify-tag
           --title "中华诗词 $TAG"
           --notes-file RELEASE_NOTES.md
+      - name: Verify public update downloads and installation
+        run: python verify_online_update.py

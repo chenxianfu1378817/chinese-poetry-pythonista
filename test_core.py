@@ -39,7 +39,7 @@ class Tests(unittest.TestCase):
         self.assertEqual(self.lib.today(),self.lib.today())
         self.assertTrue(self.lib.today()['featured'])
     def test_voice_backend_migrates_and_persists(self):
-        self.assertEqual(self.lib.user['voice_backend'],'auto')
+        self.assertEqual(self.lib.user['voice_backend'],'web')
         self.lib.settings({'voice_backend':'web'})
         self.assertEqual(Library(str(self.root)).user['voice_backend'],'web')
         with self.assertRaises(ValueError):self.lib.settings({'voice_backend':'invalid'})

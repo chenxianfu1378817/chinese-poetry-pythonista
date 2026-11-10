@@ -22,6 +22,9 @@ class Web(View):
     def load_html(self,html):
         self.html=html;Web.loaded.append(self)
         if hasattr(self,'delegate'):self.delegate.webview_did_finish_load(self)
+    def load_url(self,url):
+        import urllib.request
+        self.load_html(urllib.request.urlopen(url).read().decode('utf-8'))
     def evaluate_javascript(self,script):
         self.scripts.append(script)
         if script=='JSON.stringify(draftSnapshot())':

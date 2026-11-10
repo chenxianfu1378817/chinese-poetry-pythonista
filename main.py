@@ -30,6 +30,10 @@ def activate_fallback(active):
     return None
 
 def load(code):
+    previous=sys.modules.get('poetry_app.app')
+    for reader in list(getattr(previous,'_ACTIVE_READERS',())):
+        try:reader.close()
+        except Exception:pass
     for name in list(sys.modules):
         if name=='poetry_app' or name.startswith('poetry_app.'):del sys.modules[name]
     sys.path.insert(0,code)

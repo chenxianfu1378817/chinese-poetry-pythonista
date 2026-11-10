@@ -1,7 +1,7 @@
 """Public HTTPS installation/update smoke test; no credentials or real user data."""
 import argparse, hashlib, io, json, re, runpy, shutil, sys, tempfile, types, zipfile
 from pathlib import Path
-from poetry_app.core import Library, DEFAULT_UPDATE_URL
+from poetry_app.core import Library, DEFAULT_UPDATE_URL, VERSION
 from poetry_app import updater
 ROOT=Path(__file__).resolve().parent
 
@@ -13,6 +13,7 @@ def verify():
         manifest=updater.check(DEFAULT_UPDATE_URL)
         assert manifest is not None, 'Expected a published version newer than 1.0.0'
         version=manifest['version'];base=manifest['url'].rsplit('/',1)[0]
+        assert version==VERSION, 'Public channel has not reached the version under test'
         archive_name='ChinesePoetry-'+version+'.zip'
         full=updater.fetch(base+'/'+archive_name)
         sums=updater.fetch(base+'/SHA256SUMS.txt').decode('utf-8')
@@ -32,6 +33,9 @@ def verify():
             assert len(Web.loaded)==before_load+1
             payload=json.loads(re.search(r'window.BOOT=(.*?);\nconst themes=',Web.loaded[-1].html,re.S).group(1))
             assert payload['version']==version
+            assert payload['stats']['total']==25324
+            assert payload['stats']['authors']['李白']==1173
+            assert len(payload['poems'])<100
             assert ident in payload['user']['favorites']
             assert payload['user']['notes'][ident]=='线上更新验证手记'
             assert payload['user']['theme']=='竹叶青'

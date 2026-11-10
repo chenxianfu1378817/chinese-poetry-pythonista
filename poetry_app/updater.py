@@ -41,7 +41,7 @@ def install(root, manifest, payload=None):
                 if name.endswith('.py'): compile(content, name, 'exec')
                 dest = os.path.join(stage, name); os.makedirs(os.path.dirname(dest), exist_ok=True)
                 with open(dest, 'wb') as f: f.write(content)
-            required = {'poetry_app/__init__.py','poetry_app/app.py','poetry_app/core.py','poetry_app/updater.py','poetry_app/index.html','poetry_app/voice.py','poetry_app/learning.py','poetry_app/ai.py','poetry_app/featured.py','poetry_app/startup.py','poetry_app/converter.html','poetry_app/converter_license.html'}
+            required = {'poetry_app/__init__.py','poetry_app/app.py','poetry_app/core.py','poetry_app/updater.py','poetry_app/index.html','poetry_app/voice.py','poetry_app/learning.py','poetry_app/ai.py','poetry_app/featured.py','poetry_app/startup.py','poetry_app/converter.html','poetry_app/converter_license.html','poetry_app/corpus.py'}
             if not required.issubset(names): raise ValueError('更新文件不完整')
         target = os.path.join(releases, version)
         if os.path.exists(target): raise ValueError('此版本已安装；请先回退再清理对应版本目录')

@@ -35,6 +35,15 @@ class HTTPTests(unittest.TestCase):
         user=Library(str(self.root)).user
         self.assertIn(ident,user['favorites']);self.assertEqual(user['notes'][ident],'HTTP 保存')
         self.assertEqual(user['font_size'],30);self.assertEqual(user['learning'][ident]['status'],'mastered')
+    def test_large_catalog_is_paged_over_actual_http(self):
+        payload=self.reader.payload()
+        self.assertEqual(payload['stats']['total'],25324)
+        self.assertLess(len(payload['poems']),100)
+        first=self.post('catalog',{'author':'白居易'})['catalog']
+        self.assertEqual(first['total'],2986);self.assertEqual(len(first['poems']),40)
+        ident=first['poems'][0]['id']
+        self.assertEqual(self.post('poem',{'id':ident})['poem']['id'],ident)
+        self.assertIn(self.post('random')['poem']['id'],self.reader.lib.by_id)
     def test_key_is_explicit_only_and_not_saved_in_profile(self):
         with patch('poetry_app.ai.set_key') as setter:
             r=self.post('ai_key',{'key':'TEST_NOT_A_REAL_KEY'});setter.assert_called_once()

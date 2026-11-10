@@ -37,13 +37,17 @@ class Reader:
         if 'error' in result:raise result['error']
         return result.get('value')
     def payload(self):
-        return {'poems':self.lib.poems,'user':self.lib.user,'today':self.lib.today()['id'],
+        return {'poems':self.lib.initial(),'stats':self.lib.stats(),'user':self.lib.user,'today':self.lib.today()['id'],
             'version':VERSION,'native_shell':False,'api_url':self.base+'api'}
     def html(self):
         with open(os.path.join(os.path.dirname(__file__),'index.html'),encoding='utf-8') as f:s=f.read()
         with self.lock:payload=json.dumps(self.payload(),ensure_ascii=True).replace('<','\\u003c')
         return s.replace('__CONVERTER_URL__',self.base+'converter').replace('/*BOOTSTRAP*/','window.BOOT='+payload+';')
     def action(self,action,data):
+        if action=='catalog':
+            with self.lock:return {'catalog':self.lib.catalog(data)}
+        if action=='poem':return {'poem':self.lib.public(self.lib.poem(data['id']))}
+        if action=='random':return {'poem':self.lib.public(self.lib.random_poem())}
         if action=='ai':
             with self.lock:
                 poem=self.lib.poem(data['id']);endpoint=self.lib.user['ai_endpoint'];model=self.lib.user['ai_model']

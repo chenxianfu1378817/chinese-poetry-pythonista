@@ -1,14 +1,22 @@
-# 中华诗词 1.4.0 · Pythonista 3
+# 中华诗词 1.5.0 · Pythonista 3
 
-完整安装包，2,315 首离线诗文，搜索、分类、收藏、今日诗词、随机阅读、十首入门诗词、遮盖/填空/默写、学习进度、手记、16–40 字号、八套主题与三种外观。AI 已预设 DeepSeek Flash，只需自己填写 API key。
+完整安装包，25,324 条离线作品记录，搜索、分类、收藏、今日诗词、随机阅读、唐宋选本与名家作者筛选、遮盖/填空/默写、学习进度、手记、16–40 字号、八套主题与三种外观。AI 已预设 DeepSeek Flash，只需自己填写 API key。
 
 [下载完整安装包](https://github.com/chenxianfu1378817/chinese-poetry-pythonista/releases/latest) · [安装说明](安装使用说明.md) · [更新记录](CHANGELOG.md)
 
 ## 安装
 
-下载 ChinesePoetry-1.4.0.zip，解压整个 ChinesePoetry 文件夹到 Pythonista 3，打开 main.py 运行。请作为一个新文件夹安装，先不要覆盖旧版。
+下载 ChinesePoetry-1.5.0.zip，解压整个 ChinesePoetry 文件夹到 Pythonista 3，打开 main.py 运行。请作为一个新文件夹安装，先不要覆盖旧版。
 
 保留旧资料时，只将旧 user_data/profile.json 复制到新文件夹的 user_data/profile.json。保留原文件备份；不用复制旧 active.json、releases 或启动状态文件。
+
+## 诗库重新整理
+
+旧版只导入了唐诗、宋词各一个数据分片，导致李白少、皇帝作品靠前。本版扫描全部 58 个唐诗分片和 22 个宋词分片，加上两个三百首选本；收录 50 位常读作者的对应作品、其他作者选篇和 305 篇诗经，共 25,324 条去重记录，涉及 5,122 个作者名。唐诗 18,235 条，宋词 6,784 条，诗经 305 条。
+
+李白 1,173、杜甫 1,479、白居易 2,986、王维 397、苏轼 366、辛弃疾 632、李清照 53。数量是开源文本的去重记录，保留正文异文，不是校勘全集的权威篇数。不是 chinese-poetry 整库；此次没有导入全部宋诗。
+
+诗库增加作者、选集筛选和每次 40 首的分页加载；首页名篇优先，随机阅读按常读作者均衡抽取，今日诗词从选本中选取。旧版收藏、手记、学习记录与 AI 缓存的 ID 保留，旧资料涉及的主库外作品仍可查询。新诗库随程序包在线更新，不必手动另装数据。来源快照、每个文件的校验值和完整计数见 [诗库说明](诗库说明.md) 与 data/CORPUS_REPORT.json。
 
 ## 本版调整
 
@@ -26,7 +34,7 @@
 
 设置 → 检查更新 → 点击出现的安装按钮 → 退出 → 再运行 main.py。当前完整包包含新版启动器，之后更新只替换程序模块，保留个人资料。首次建议直接下载完整包，避免继续混用旧文件。
 
-基础诗文来自 chinese-poetry/chinese-poetry（MIT），来源见 data/SOURCES.json 与 poetry_app/featured.py。代码为 MIT。测试涵盖真实 HTTP 服务、访问边界、资料保存与实际浏览器交互；尚未连接用户 iPhone，不能把桌面测试等同于手机绝对稳定。
+基础诗文来自 chinese-poetry/chinese-poetry（MIT），来源见 data/CORPUS_REPORT.json；旧缓存来源保留在 data/SOURCES.json 与 poetry_app/featured.py。代码为 MIT。测试涵盖真实 HTTP 服务、访问边界、资料保存与实际浏览器交互；尚未连接用户 iPhone，不能把桌面测试等同于手机绝对稳定。
 
 ## 内置声音选择
 

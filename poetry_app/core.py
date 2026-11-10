@@ -1,7 +1,9 @@
 import json, os, random, datetime, tempfile
 from .featured import EXTRA_POEMS
 from .learning import review_record
-VERSION = '1.4.0'
+from .corpus import load,MAJOR_AUTHORS,CHAR_MAP
+import collections
+VERSION = '1.5.0'
 DEFAULT_UPDATE_URL = 'https://raw.githubusercontent.com/chenxianfu1378817/chinese-poetry-pythonista/updates/update_channel/manifest.json'
 
 def atomic_json(path, value):
@@ -34,20 +36,65 @@ class Library:
         if self.user.get('voice_backend') not in ('auto','web','pythonista','off'):self.user['voice_backend']='auto'
         if self.user.get('text_script') not in ('original','simplified','traditional'):self.user['text_script']='simplified'
         self.user['font_size']=font_size(self.user.get('font_size'))
-        with open(os.path.join(root,'data','poems.json'),encoding='utf-8') as f:self.poems=json.load(f)
-        ids={p['id'] for p in self.poems}
-        self.poems.extend(p for p in EXTRA_POEMS if p['id'] not in ids)
-        self.by_id={p['id']:p for p in self.poems}
+        with open(os.path.join(root,'data','poems.json'),encoding='utf-8') as f:legacy=json.load(f)
+        legacy.extend(EXTRA_POEMS)
+        self.poems=load()
+        self.by_id={p['id']:p for p in legacy}
+        self.by_id.update({p['id']:p for p in self.poems})
+        self.translation=str.maketrans(CHAR_MAP)
+        self.index={p['id']:(p['title']+p['author']+''.join(p['paragraphs'])).translate(self.translation).casefold() for p in self.poems}
+        self.authors=dict(collections.Counter(p['author_key'] for p in self.poems))
+        self.groups={}
+        for p in self.poems:self.groups.setdefault(p['author_key'],[]).append(p)
+        self.featured=[p for p in self.poems if p.get('featured')]
+        self.random_groups={a:self.groups[a] for a in MAJOR_AUTHORS if a in self.groups}
+        self.featured_groups={}
+        for p in self.featured:self.featured_groups.setdefault(p['author_key'],[]).append(p)
+    def personal_ids(self):
+        return set(self.user['favorites'])|set(self.user['notes'])|set(self.user['learning'])|set(self.user['ai_cache'])
+    def catalog_pool(self):
+        # Keep saved legacy entries discoverable without reintroducing shard order.
+        return self.poems+[self.by_id[i] for i in sorted(self.personal_ids()) if i in self.by_id and i not in self.index]
+    def matches(self,p,query):
+        if not query:return True
+        text=self.index.get(p['id'])
+        if text is None:text=(p['title']+p['author']+''.join(p['paragraphs'])).translate(self.translation).casefold()
+        return query in text
+    def public(self,p):
+        return {k:v for k,v in p.items() if not k.startswith('_')}
+    def initial(self):
+        ids=[p['id'] for p in self.featured[:80]]+[self.today()['id']]+self.user['favorites']+list(self.user['learning'])
+        return [self.public(self.by_id[i]) for i in dict.fromkeys(ids) if i in self.by_id]
+    def stats(self):
+        return {'total':len(self.poems),'authors':self.authors,'categories':dict(collections.Counter(p['category'] for p in self.poems)),
+                'collections':dict(collections.Counter(c for p in self.poems for c in p.get('collections',[]))),
+                'major_authors':MAJOR_AUTHORS,'scope':'唐宋选本、主要诗人扩充、其他作者选篇；旧版非主库作品保留在个人收藏。'}
+    def catalog(self,data):
+        query=str(data.get('query','')).translate(self.translation).casefold().strip();category=data.get('category','');author=data.get('author','');collection=data.get('collection','')
+        pool=[self.by_id[i] for i in self.user['favorites'] if i in self.by_id] if data.get('favorites') else self.catalog_pool()
+        result=[]
+        for p in pool:
+            if category and p['category']!=category:continue
+            if author and p.get('author_key',p['author'])!=author:continue
+            if collection and collection not in p.get('collections',[]):continue
+            if not self.matches(p,query):continue
+            result.append(p)
+        offset=max(0,int(data.get('offset',0)));limit=max(1,min(80,int(data.get('limit',40))))
+        return {'poems':[self.public(p) for p in result[offset:offset+limit]],'total':len(result),'offset':offset,'more':offset+limit<len(result)}
+    def random_poem(self,rng=None,featured=False):
+        rng=rng or random
+        groups=self.featured_groups if featured else self.random_groups
+        return rng.choice(groups[rng.choice(sorted(groups))])
     def save(self): atomic_json(self.path,self.user)
     def poem(self,ident):
         if ident not in self.by_id:raise ValueError('未找到诗词')
         return self.by_id[ident]
     def search(self,query='',category='',favorites=False):
-        q=query.casefold().strip()
-        return [p for p in self.poems if (not category or p['category']==category) and
-                (not favorites or p['id'] in self.user['favorites']) and
-                (not q or q in (p['title']+p['author']+''.join(p['paragraphs'])).casefold())]
-    def today(self):return random.Random(datetime.date.today().isoformat()).choice(EXTRA_POEMS)
+        # Developer helper returns complete matches; UI uses bounded catalog pages.
+        pool=[self.by_id[i] for i in self.user['favorites'] if i in self.by_id] if favorites else self.catalog_pool()
+        q=query.translate(self.translation).casefold().strip()
+        return [p for p in pool if (not category or p['category']==category) and self.matches(p,q)]
+    def today(self):return self.random_poem(random.Random(datetime.date.today().isoformat()),True)
     def favorite(self,ident):
         self.poem(ident);f=self.user['favorites']
         if ident in f:f.remove(ident)

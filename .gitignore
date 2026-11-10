@@ -4,3 +4,4 @@ __pycache__/
 user_data/
 releases/
 release_build/
+update-publish/

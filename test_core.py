@@ -71,6 +71,8 @@ class Tests(unittest.TestCase):
         self.assertEqual(reloaded.user['update_url'], DEFAULT_UPDATE_URL)
         self.assertIn(ident,reloaded.user['favorites'])
         self.assertEqual(reloaded.user['notes'][ident],'保留旧版手记')
+        reloaded.user['update_url']='https://github.com/chenxianfu1378817/chinese-poetry-pythonista/releases/latest/download/manifest.json';reloaded.save()
+        self.assertEqual(Library(str(self.root)).user['update_url'], DEFAULT_UPDATE_URL)
         reloaded.user['update_url']='https://example.com/custom.json';reloaded.save()
         self.assertEqual(Library(str(self.root)).user['update_url'],'https://example.com/custom.json')
 if __name__=='__main__':unittest.main()

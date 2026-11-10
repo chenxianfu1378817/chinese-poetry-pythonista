@@ -2,6 +2,9 @@ name: Publish release
 on:
   push:
     tags: ['v*']
+concurrency:
+  group: publish-release
+  cancel-in-progress: false
 permissions:
   contents: write
 jobs:
@@ -18,7 +21,22 @@ jobs:
         env:
           TAG: ${{ github.ref_name }}
           REPO: ${{ github.repository }}
-        run: python make_release.py --tag "$TAG" --base-url "https://github.com/$REPO/releases/download/$TAG"
+        run: python make_release.py --tag "$TAG" --base-url "https://raw.githubusercontent.com/$REPO/updates/update_channel"
+      - name: Publish GitHub direct update channel
+        run: |
+          if git ls-remote --exit-code origin refs/heads/updates; then
+            git fetch origin updates
+            git worktree add --detach update-publish FETCH_HEAD
+          else
+            git worktree add --detach update-publish HEAD
+          fi
+          mkdir -p update-publish/update_channel
+          cp release_build/*.zip release_build/manifest.json release_build/SHA256SUMS.txt update-publish/update_channel/
+          git -C update-publish config user.name "github-actions[bot]"
+          git -C update-publish config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git -C update-publish add update_channel
+          git -C update-publish commit -m "Publish verified update channel"
+          git -C update-publish push origin HEAD:refs/heads/updates
       - name: Publish installation and update assets
         env:
           GH_TOKEN: ${{ github.token }}

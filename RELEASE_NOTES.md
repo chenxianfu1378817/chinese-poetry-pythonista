@@ -4,7 +4,7 @@ Pythonista 3《中华诗词》正式发布：2,305 首离线诗词，支持搜�
 
 **已安装用户**：应用设置 → 检查更新 → 确认安装 → 停止旧脚本后重新运行 main.py。收藏和手记保留。若还使用 1.0.0，先在设置保存下方更新地址，再检查更新。
 
-固定更新地址：https://github.com/chenxianfu1378817/chinese-poetry-pythonista/releases/latest/download/manifest.json
+固定更新地址：https://raw.githubusercontent.com/chenxianfu1378817/chinese-poetry-pythonista/updates/update_channel/manifest.json
 
 反馈异常：https://github.com/chenxianfu1378817/chinese-poetry-pythonista/issues
 
